@@ -12,7 +12,27 @@ app.use(express.json());
 // Models
 const User = require('./models/User');
 
-// Private Route
+function checkToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ msg: "Acesso negado." });
+    }
+
+    try {
+        const secret = process.env.SECRET;
+
+        jwt.verify(token, secret);
+
+        next();
+        
+    } catch (err) {
+        res.status(400).json({ msg: "Token inválido." });
+    }
+}
+
+// Get user data (restricted)
 app.get('/users/:id', checkToken, async (req, res) => {
 
     const id = req.params.id;
@@ -77,7 +97,7 @@ app.post('/users', async (req, res) => {
 });
 
 // Login
-app.post('/users/login', async (req, res) => {
+app.post('/auth/login', async (req, res) => {
 
     const {email, password} = req.body;
 
@@ -119,25 +139,27 @@ app.post('/users/login', async (req, res) => {
     }
 });
 
-function checkToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+app.delete('/users/:id', checkToken, async(req, res) => {
 
-    if (!token) {
-        return res.status(401).json({ msg: "Acesso negado." });
+    const id = req.params.id;
+
+    const user = await User.findById(id, '-password');
+
+    if (!user) {
+        return res.status(404).json({ msg: "Usuário não encontrado." });
     }
 
     try {
-        const secret = process.env.SECRET;
+        await User.findByIdAndDelete(user._id);
 
-        jwt.verify(token, secret);
+        res.status(200).json({ msg: "O usuário foi deletado com sucesso" });
 
-        next();
-        
     } catch (err) {
-        res.status(400).json({ msg: "Token inválido." });
+        console.log(err);
+
+        return res.status(500).json({ msg: "Não foi possível deletar o usuário." });
     }
-}
+});
 
 // Credencials
 const dbUser = process.env.DB_USER;
