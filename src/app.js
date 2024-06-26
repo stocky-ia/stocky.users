@@ -1,18 +1,21 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const swaggerUI = require('swagger-ui-express');
+const swaggerSpec = require('./swagger');
 
-const CreateUserController = require('./controllers/CreateUserController');
-const DeleteUserController = require('./controllers/DeletUserController');
-const GetUserDataController = require('./controllers/GetUserDataController');
-const LoginController = require('./controllers/LoginController');
-const UpdateUserController = require('./controllers/UpdateUserController');
-
-const User = require('./models/User');
+// Routes
+const createUserRoute = require('./routes/create-user-route');
+const deleteUserRoute = require('./routes/delete-user-route');
+const getDataRoute = require('./routes/get-user-route');
+const loginRoute = require('./routes/login-route');
+const updateRoute = require('./routes/update-user-route');
 
 const app = express();
+
+// Swagger
+app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 
 // Config JSON Respose
 app.use(express.json());
@@ -31,21 +34,19 @@ function checkToken(req, res, next) {
         jwt.verify(token, secret);
 
         next();
-        
+
     } catch (err) {
         res.status(400).json({ msg: "Token inválido." });
     }
 }
 
-app.get('/users/:id', checkToken, GetUserDataController.get);
 
-app.post('/users', CreateUserController.create);
-
-app.post('/auth/login', LoginController.login);
-
-app.delete('/users/:id', checkToken, DeleteUserController.delete);
-
-app.put('/users/update/:id', checkToken, UpdateUserController.update);
+// Endpoints
+app.use('/users', createUserRoute);
+app.use('/users', checkToken, getDataRoute);
+app.use('/auth', loginRoute);
+app.use('/users', checkToken, deleteUserRoute);
+app.use('/users', checkToken, updateRoute);
 
 // Credencials
 const dbUser = process.env.DB_USER;
@@ -58,3 +59,5 @@ mongoose
         app.listen(3131);
         console.log("Conectou ao banco!");
     }).catch((err) => console.log(err));
+
+module.exports = app;
