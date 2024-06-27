@@ -4,6 +4,7 @@ Este projeto é uma aplicação desenvolvida com o intuito de servir como um mic
 ## Tecnologias Utilizadas
 
 - **Node.JS**
+- **Express (framework de NodeJS)**
 - **MongoDB**
 - **Swagger**
 
