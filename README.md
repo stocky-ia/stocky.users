@@ -22,7 +22,7 @@ http://localhost:3131/api-docs/
 
 ### Pré-requisitos
 
-- Node.js (v14 ou superior)
+- Node.js (v20 ou superior)
 - npm (v6 ou superior) ou yarn
 
 ### Passos para Rodar a Aplicação
