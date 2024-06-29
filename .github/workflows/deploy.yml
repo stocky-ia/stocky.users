@@ -1,0 +1,70 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+    - name: Create app directory on EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no -t ec2-user@${{ secrets.EC2_HOST }} "mkdir -p ~/app"
+
+    - name: Create .env file
+      run: |
+        echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > .env
+        echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
+        echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
+        echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
+        echo "AWS_S3_BUCKET_NAME=stocky-rupturas" >> .env
+
+    - name: Copy files to EC2
+      run: |
+        scp -o StrictHostKeyChecking=no -r ./* ec2-user@${{ secrets.EC2_HOST }}:~/app
+        scp -o StrictHostKeyChecking=no .env ec2-user@${{ secrets.EC2_HOST }}:~/app
+
+    - name: Install dependencies on EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no -t ec2-user@${{ secrets.EC2_HOST }} << 'EOF'
+          sudo yum update -y
+          sudo yum install -y docker python3-pip python3-devel
+          sudo systemctl start docker
+          sudo systemctl enable docker
+          sudo ln -s /usr/lib64/libcrypt.so.1 /lib/libcrypt.so.1 || true
+          sudo usermod -aG docker ec2-user
+          sudo chmod 666 /var/run/docker.sock
+        EOF
+
+    - name: Install Docker Compose on EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no -t ec2-user@${{ secrets.EC2_HOST }} << 'EOF'
+          if ! [ -x "$(command -v docker-compose)" ]; then
+            sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+            sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+          fi
+        EOF
+
+    - name: SSH into EC2 and run Docker commands
+      run: |
+        ssh -o StrictHostKeyChecking=no -t ec2-user@${{ secrets.EC2_HOST }} << 'EOF'
+          cd ~/app
+          docker-compose down
+          docker-compose up -d --build
+        EOF
+
+    - name: Clean up .env file
+      run: |
+        ssh -o StrictHostKeyChecking=no -t ec2-user@${{ secrets.EC2_HOST }} "rm ~/app/.env"

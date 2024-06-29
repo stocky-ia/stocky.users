@@ -53,7 +53,7 @@ const dbUser = process.env.DB_USER;
 const dbPass = process.env.DB_PASS;
 
 mongoose
-    .connect(`mongodb+srv://${dbUser}:${dbPass}@clusterauthjwt.avbtxiw.mongodb.net/?
+    .connect(`mongodb+srv://denis:010203@clusterauthjwt.avbtxiw.mongodb.net/?
         retryWrites=true&w=majority&appName=ClusterAuthJWT`)
     .then(() => {
         app.listen(3131);
