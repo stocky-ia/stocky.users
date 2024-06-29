@@ -38,7 +38,12 @@ exports.login = async (req, res) => {
             secret,
         );
 
-        res.status(200).json({ msg: "Login realizado com sucesso", token });
+        const authentication = {
+            "JWT": token,
+            "ID": user.id,
+        }
+
+        res.status(200).json({ msg: "Login realizado com sucesso.", authentication });
     } catch (err) {
         res.status(500).json({ msg: "Erro na autenticação." });
     }
